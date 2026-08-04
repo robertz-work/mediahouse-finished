@@ -1,0 +1,28 @@
+{
+  "requireOrderApproval": true,
+  "holdTimeoutMinutes": 15,
+  "voivodeships": [
+    "dolnoslaskie",
+    "kujawsko-pomorskie",
+    "lubelskie",
+    "lubuskie",
+    "lodzkie",
+    "malopolskie",
+    "mazowieckie",
+    "opolskie",
+    "podkarpackie",
+    "podlaskie",
+    "pomorskie",
+    "slaskie",
+    "swietokrzyskie",
+    "warminsko-mazurskie",
+    "wielkopolskie",
+    "zachodniopomorskie"
+  ],
+  "contactEmail": "kontakt@mediahouse.pl",
+  "companyName": "Media House",
+  "companyAddress": "test adres",
+  "companyNIP": "test nip",
+  "bankName": "Nazwa Banku",
+  "bankAccountNumber": "test numer konta"
+}

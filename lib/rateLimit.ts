@@ -1,0 +1,56 @@
+
+
+interface Bucket {
+  count: number;
+  resetAt: number;
+}
+
+const buckets = new Map<string, Bucket>();
+
+export interface RateLimitResult {
+  ok: boolean;
+  retryAfter: number;
+}
+
+/**
+ * Records a hit for `key` and reports whether it is within the allowed limit.
+ *
+ * @param key    Unique bucket key, e.g. `login:<ip>` or `register:<ip>`.
+ * @param limit  Max allowed hits per window.
+ * @param windowMs  Window length in milliseconds.
+ */
+export function rateLimit(
+  key: string,
+  limit: number,
+  windowMs: number
+): RateLimitResult {
+  const now = Date.now();
+  const bucket = buckets.get(key);
+
+  if (!bucket || now >= bucket.resetAt) {
+    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    return { ok: true, retryAfter: 0 };
+  }
+
+  bucket.count += 1;
+  if (bucket.count > limit) {
+    return { ok: false, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) };
+  }
+  return { ok: true, retryAfter: 0 };
+}
+
+export function clientIp(headers: Headers): string {
+  const fwd = headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim();
+  return headers.get("x-real-ip") ?? "unknown";
+}
+
+if (typeof setInterval !== "undefined") {
+  const timer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, b] of buckets) {
+      if (now >= b.resetAt) buckets.delete(key);
+    }
+  }, 60_000);
+  (timer as { unref?: () => void }).unref?.();
+}

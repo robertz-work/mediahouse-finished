@@ -1,0 +1,19 @@
+# ───────────────────────────────────────────────
+# Railway deployment configuration
+# https://docs.railway.app/reference/config-as-code
+# ───────────────────────────────────────────────
+
+[build]
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/hello"
+healthcheckTimeout = 120
+numReplicas = 1
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+# ── Persistent volume for JSON DB + uploads ──
+# After first deploy, create a volume in Railway dashboard:
+#   Settings → Volumes → Add Volume
+#   Mount path: /app/persistent
