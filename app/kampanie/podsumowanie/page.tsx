@@ -131,21 +131,30 @@ export default function CampaignSummaryPage() {
 
       if (paymentMethod === "proforma") {
         router.push(`/kampanie/zlozono?status=awaiting_payment&method=proforma&id=${campaign.id}`);
-      } else if (paymentMethod === "p24" || paymentMethod === "payu") {
-        const payRes = await fetch(`/api/payments/${paymentMethod}/create`, {
+      } else if (paymentMethod === "p24") {
+        // Wylicz kwotę brutto dla payloadu P24
+        const grossTotal = Math.round(campaign.totals.grandTotal * (1 + VAT_RATE));
+
+        const payRes = await fetch(`/api/payments/p24/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ campaignId: campaign.id }),
+          body: JSON.stringify({ 
+            campaignId: campaign.id,
+            amount: grossTotal,
+            email: billingEmail
+          }),
         });
 
         if (!payRes.ok) {
           const err = await payRes.json();
-          throw new Error(err.error || "Nie udało się utworzyć płatności");
+          throw new Error(err.error || "Nie udało się utworzyć płatności w Przelewy24");
         }
 
         const { redirectUrl } = await payRes.json();
         window.location.href = redirectUrl;
         return;
+      } else if (paymentMethod === "payu") {
+        throw new Error("Płatność PayU jest tymczasowo niedostępna");
       } else {
         router.push("/kampanie/zlozono?status=awaiting_payment");
       }
@@ -307,7 +316,7 @@ export default function CampaignSummaryPage() {
                   /}
 
               {/* Przelewy24 */}
-              {false && (
+              {true && (
               <label
                 className={`flex cursor-pointer items-start gap-4 rounded-xl border-2 p-4 transition ${
                   paymentMethod === "p24"
