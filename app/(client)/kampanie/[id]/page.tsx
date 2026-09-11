@@ -14,6 +14,7 @@ import CancelButton from "./CancelButton";
 import CampaignTimeline from "./CampaignTimeline";
 import RemoveItemButton from "./RemoveItemButton";
 import GoToCartButton from "./GoToCartButton";
+import PayP24Button from "./PayP24Button"; // <-- DODAJE IMPORT
 
 const STATUS_LABELS: Record<CampaignStatus, string> = {
   draft: "Szkic",
@@ -58,7 +59,6 @@ export default async function KampaniaSzczegolyPage({
   const isAdmin = session.user.role === "admin";
   if (!campaign || (!isOwner && !isAdmin)) notFound();
 
-
   const mediaMap = new Map<string, { code: string; address: string; photos: string[] }>();
   for (const item of campaign.items) {
     if (!mediaMap.has(item.mediaId)) {
@@ -75,7 +75,6 @@ export default async function KampaniaSzczegolyPage({
 
   const grossTotal = campaign.totals.grandTotal * (1 + VAT_RATE);
 
-
   const timelineItems = campaign.items.map((item) => {
     const media = mediaMap.get(item.mediaId);
     return {
@@ -88,7 +87,6 @@ export default async function KampaniaSzczegolyPage({
 
   return (
     <div>
-
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
@@ -107,7 +105,6 @@ export default async function KampaniaSzczegolyPage({
         </span>
       </div>
 
-
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatBox label="Nośniki" value={String(campaign.items.length)} />
         <StatBox
@@ -124,12 +121,8 @@ export default async function KampaniaSzczegolyPage({
             currency: "PLN",
           })}
         />
-        <StatBox
-          label="Status"
-          value={STATUS_LABELS[campaign.status]}
-        />
+        <StatBox label="Status" value={STATUS_LABELS[campaign.status]} />
       </div>
-
 
       {campaign.items.length > 0 && (
         <section className="mb-8">
@@ -139,7 +132,6 @@ export default async function KampaniaSzczegolyPage({
           <CampaignTimeline items={timelineItems} />
         </section>
       )}
-
 
       <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold text-slate-900">
@@ -156,7 +148,6 @@ export default async function KampaniaSzczegolyPage({
                   key={item.id}
                   className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4"
                 >
-
                   {media?.photos?.[0] && (
                     <img
                       src={media.photos[0]}
@@ -203,7 +194,6 @@ export default async function KampaniaSzczegolyPage({
         )}
       </section>
 
-
       {campaign.billing.name && (
         <section className="mb-8">
           <h2 className="mb-4 text-lg font-semibold text-slate-900">
@@ -218,11 +208,10 @@ export default async function KampaniaSzczegolyPage({
         </section>
       )}
 
-
       {campaign.paymentMethod && (
         <section className="mb-8">
           <h2 className="mb-4 text-lg font-semibold text-slate-900">
-            Faktury
+            Płatność i faktury
           </h2>
           <div className="rounded-2xl border border-slate-200 p-5">
             <div className="flex items-center justify-between">
@@ -232,6 +221,8 @@ export default async function KampaniaSzczegolyPage({
                   {PAYMENT_METHOD_LABELS[campaign.paymentMethod as PaymentMethod] ?? campaign.paymentMethod}
                 </p>
               </div>
+
+              {/* Sekcja dla Proforma */}
               {campaign.paymentMethod === "proforma" && campaign.invoiceUrl && (
                 <a
                   href={campaign.invoiceUrl}
@@ -245,7 +236,20 @@ export default async function KampaniaSzczegolyPage({
                   Pobierz fakturę pro forma
                 </a>
               )}
+
+              {/* Sekcja dla Przelewy24 (Przycisk "Zapłać") */}
+              {(campaign.paymentMethod === "p24") &&
+                campaign.status === "awaiting_payment" &&
+                isOwner && (
+                  <PayP24Button
+      campaignId={campaign.id}
+      amount={grossTotal}
+      email={campaign.billing.email || session.user.email || ""}
+    />
+                )}
             </div>
+
+            {/* Komunikat dla Proforma */}
             {campaign.paymentMethod === "proforma" && campaign.invoiceNumber && (
               <div className="mt-3 rounded-xl bg-amber-50 p-3">
                 <p className="text-sm text-amber-800">
@@ -258,17 +262,19 @@ export default async function KampaniaSzczegolyPage({
                 )}
               </div>
             )}
-            {campaign.paymentMethod === "proforma" && !campaign.invoiceUrl && campaign.status === "awaiting_payment" && (
-              <div className="mt-3 rounded-xl bg-slate-50 p-3">
-                <p className="text-sm text-slate-500">
-                  Faktura pro forma jest w trakcie generowania. Odśwież stronę za chwilę.
-                </p>
-              </div>
-            )}
+
+            {/* Komunikat dla P24 w trakcie oczekiwania */}
+            {(campaign.paymentMethod === "p24" ) &&
+              campaign.status === "awaiting_payment" && (
+                <div className="mt-3 rounded-xl bg-blue-50 p-3">
+                  <p className="text-xs text-blue-800">
+                    Kampania oczekuje na opłacenie online. Kliknij przycisk „Zapłać przez Przelewy24”, aby bezpiecznie przejść do płatności.
+                  </p>
+                </div>
+              )}
           </div>
         </section>
       )}
-
 
       <section className="mb-8">
         <h2 className="mb-4 text-lg font-semibold text-slate-900">
@@ -276,24 +282,11 @@ export default async function KampaniaSzczegolyPage({
         </h2>
         <div className="rounded-2xl border border-slate-200 p-5">
           <div className="space-y-2 text-sm">
-            <Row
-              label="Nośniki (netto)"
-              value={campaign.totals.mediaSubtotal}
-            />
-            <Row
-              label="Druk (netto)"
-              value={campaign.totals.printSubtotal}
-            />
-            <Row
-              label="Montaż (netto)"
-              value={campaign.totals.installSubtotal}
-            />
+            <Row label="Nośniki (netto)" value={campaign.totals.mediaSubtotal} />
+            <Row label="Druk (netto)" value={campaign.totals.printSubtotal} />
+            <Row label="Montaż (netto)" value={campaign.totals.installSubtotal} />
             <div className="border-t border-slate-100 pt-2">
-              <Row
-                label="Razem netto"
-                value={campaign.totals.grandTotal}
-                bold
-              />
+              <Row label="Razem netto" value={campaign.totals.grandTotal} bold />
             </div>
             <Row label="VAT (23%)" value={campaign.totals.grandTotal * VAT_RATE} />
             <div className="border-t border-slate-200 pt-2">
@@ -303,13 +296,11 @@ export default async function KampaniaSzczegolyPage({
         </div>
       </section>
 
-
       {isOwner && campaign.status === "draft" && campaign.items.length > 0 && (
         <div className="mb-6">
           <GoToCartButton campaignId={campaign.id} />
         </div>
       )}
-
 
       {isOwner && CANCELLABLE.includes(campaign.status) && (
         <CancelButton campaignId={campaign.id} />

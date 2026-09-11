@@ -4,37 +4,43 @@ import { useState } from "react";
 
 interface PayP24ButtonProps {
   campaignId: string;
+  amount: number;
+  email: string;
 }
 
-export default function PayP24Button({ campaignId }: PayP24ButtonProps) {
+export default function PayP24Button({ campaignId, amount, email }: PayP24ButtonProps) {
   const [loading, setLoading] = useState(false);
 
   const handlePay = async () => {
     try {
       setLoading(true);
 
-      // Strzał do Twojego API inicjującego płatność w P24
-      const res = await fetch("/api/payments/p24/initiate", {
+      // Dostosuj ścieżkę do swojego pliku route.ts (np. /api/payments/p24/register lub /api/p24/register)
+      const res = await fetch("/api/payments/p24/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId }),
+        body: JSON.stringify({
+          campaignId,
+          amount,
+          email,
+        }),
       });
-
-      if (!res.ok) {
-        throw new Error("Błąd podczas inicjalizacji płatności.");
-      }
 
       const data = await res.json();
 
-      // Przekierowanie użytkownika do Przelewy24 (adres zwrócony z API)
-      if (data.url) {
-        window.location.href = data.url;
+      if (!res.ok) {
+        throw new Error(data.error || "Błąd podczas inicjalizacji płatności.");
+      }
+
+      // Przekierowanie na stronę płatności P24
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
       } else {
         alert("Nie udało się uzyskać linku do płatności.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Wystąpił błąd podczas przekierowywania do płatności.");
+      alert(err.message || "Wystąpił błąd podczas przekierowywania do płatności.");
     } finally {
       setLoading(false);
     }
